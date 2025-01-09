@@ -3,44 +3,21 @@ name: Build
 on:
   workflow_run:
     workflows: ["Integration tests"]
-    types:
-      - completed
+    types: [completed]
+    branches: [dev]
 
 jobs:
-    build_flutter_android:
-        name: Build Flutter Android
-        runs-on: ubuntu-latest
-        if: github.event.workflow_run.conclusion == 'success'
-        steps:
-            - uses: actions/checkout@v4
-            - name: Set up Flutter
-              uses: subosito/flutter-action@v2
-              with:
-                flutter-version: 3.19.0
-                # optional parameters follow
-                cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:" # optional, change this to force refresh cache
-                cache-path: "${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:" # optional, change this to specify the cache path
-                pub-cache-key: "flutter-pub:os:-:channel:-:version:-:arch:-:hash:" # optional, change this to force refresh cache of dart pub get dependencies
-                pub-cache-path: "${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:" # optional, change this to specify the cache path
-            - run: flutter pub get
-            - run: flutter build apk
-            - run: flutter build appbundle
-        
-    # build_flutter_ios:
-    #     name: Build Flutter iOS
-    #     runs-on: macos-latest
-    #     if: github.event.workflow_run.conclusion == 'success'
-    #     steps:
-    #         - uses: actions/checkout@v4
-    #         - name: Set up Flutter
-    #           uses: subosito/flutter-action@v2
-    #           with:
-    #             channel: stable
-    #             cache: true
-    #             # optional parameters follow
-    #             cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:" # optional, change this to force refresh cache
-    #             cache-path: "${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:" # optional, change this to specify the cache path
-    #             pub-cache-key: "flutter-pub:os:-:channel:-:version:-:arch:-:hash:" # optional, change this to force refresh cache of dart pub get dependencies
-    #             pub-cache-path: "${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:" # optional, change this to specify the cache path
-    #         - run: flutter pub get
-    #         - run: flutter build ios --release --no-codesign
+  build_flutter_android:
+    name: Build Flutter Android
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.19.0
+          cache: true
+      - run: flutter pub get
+      - run: flutter build apk
+      - run: flutter build appbundle

@@ -3,40 +3,43 @@ name: Integration tests
 on:
   workflow_run:
     workflows: ["Lint code"]
-    types:
-      - completed
+    types: [completed]
+    branches: [dev]
 
 jobs:
-    django_tests:
-        name: Run Django tests
-        runs-on: ubuntu-latest
-        if: github.event.workflow_run.conclusion == 'success'
-        steps:
-            - uses: actions/checkout@v4
-            - name: Set up Python
-              uses: actions/setup-python@v2
-              with:
-                python-version: 3.11
-            - name: Install dependencies
-              run: pip install -r requirements.txt
-              working-directory: ./backend
-            - name: Run tests
-              run: python manage.py test
-              working-directory: ./backend/playfit
+  django_tests:
+    name: Run Django tests
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.11
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        working-directory: ./backend
+      - name: Run tests
+        run: python manage.py test
+        working-directory: ./backend/playfit
+        env:
+          SECRET_KEY: ${{ secrets.BACKEND_SECRET_KEY }}
+          DEBUG: 'False'
 
-    flutter_tests:
-        name: Run Flutter tests
-        runs-on: ubuntu-latest
-        if: github.event.workflow_run.conclusion == 'success'
-        steps:
-            - uses: actions/checkout@v4
-            - name: Set up Flutter
-              uses: subosito/flutter-action@v2
-              with:
-                flutter-version: 3.19.0
-            - name: Install dependencies
-              run: flutter pub get
-              working-directory: ./frontend
-            - name: Run tests
-              run: flutter test
-              working-directory: ./frontend/playfit
+  flutter_tests:
+    name: Run Flutter tests
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.19.0
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: ./playfit-mobile/playfit
+      - name: Run tests
+        run: flutter test
+        working-directory: ./playfit-mobile/playfit
