@@ -1,6 +1,6 @@
 import django.contrib.auth.password_validation as validators
 from rest_framework import serializers
-from .models import CustomUser
+from .models import *
 
 class CustomUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -40,3 +40,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
         return value
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta():
+        model = Product
+        fields = "__all__"

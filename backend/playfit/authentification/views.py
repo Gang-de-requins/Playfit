@@ -4,14 +4,15 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, login
-from .serializers import CustomUserSerializer
-from .models import CustomUser
+from .serializers import CustomUserSerializer, ProductSerializer
+from .models import CustomUser, Product
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from social_django.utils import load_strategy
 from social_core.backends.google import GoogleOAuth2
 from social_core.exceptions import AuthForbidden
 from .utils import generate_username_with_number, get_user_birthdate
+
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -144,3 +145,50 @@ class GoogleOAuthLoginView(APIView):
                 return Response({'status': 'success', 'message': 'Account created and logged in', 'token': django_token.key}, status=status.HTTP_200_OK)
         except AuthForbidden:
             return Response({'status': 'error', 'message': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Create your views here
+
+class DocsView(APIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+
+    def list(self, request, *args, **kwargs):
+        data = list(Product.objects.all().values())
+        return Response(data)
+
+    def retrieve(self, request, *args, **kwargs):
+        data = list(Product.objects.filter(id=kwargs['pk']).values())
+        return Response(data)
+
+    def create(self, request, *args, **kwargs):
+        product_serializer_data = ProductSerializer(data=request.data)
+        if product_serializer_data.is_valid():
+            product_serializer_data.save()
+            status_code = status.HTTP_201_CREATED
+            return Response({"message": "Product Added Sucessfully", "status": status_code})
+        else:
+            status_code = status.HTTP_400_BAD_REQUEST
+            return Response({"message": "please fill the datails", "status": status_code})
+
+    def destroy(self, request, *args, **kwargs):
+        product_data = Product.objects.filter(id=kwargs['pk'])
+        if product_data:
+            product_data.delete()
+            status_code = status.HTTP_201_CREATED
+            return Response({"message": "Product delete Sucessfully", "status": status_code})
+        else:
+            status_code = status.HTTP_400_BAD_REQUEST
+            return Response({"message": "Product data not found", "status": status_code})
+
+    def update(self, request, *args, **kwargs):
+        product_details = Product.objects.get(id=kwargs['pk'])
+        product_serializer_data = ProductSerializer(
+            product_details, data=request.data, partial=True)
+        if product_serializer_data.is_valid():
+            product_serializer_data.save()
+            status_code = status.HTTP_201_CREATED
+            return Response({"message": "Product Update Sucessfully", "status": status_code})
+        else:
+            status_code = status.HTTP_400_BAD_REQUEST
+            return Response({"message": "Product data Not found", "status": status_code})
