@@ -1,60 +1,100 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'movenet_model.dart';
+import 'package:playfit/workout_analyzer.dart';
+import 'package:playfit/image_converter.dart';
 
 class CameraView extends StatefulWidget {
+  const CameraView({super.key});
+
   @override
-  _CameraViewState createState() => _CameraViewState();
+  State<CameraView> createState() => _CameraViewState();
 }
 
 class _CameraViewState extends State<CameraView> {
-  late CameraController _controller;
-  late List<CameraDescription> cameras;
-  final PoseDetector model = PoseDetector();
-  var squatCount = 0;
+  CameraController? _controller;
+  bool _isDetecting = false;
+  final WorkoutAnalyzer _workoutAnalyzer = WorkoutAnalyzer();
 
   @override
   void initState() {
     super.initState();
     initCamera();
-    model.loadModel();
   }
 
-  // Initialize the camera
   Future<void> initCamera() async {
-    cameras = await availableCameras();
+    final cameras = await availableCameras();
     _controller = CameraController(
-      cameras.firstWhere((camera) => camera.lensDirection == CameraLensDirection.front),
+      cameras.firstWhere(
+          (camera) => camera.lensDirection == CameraLensDirection.front),
       ResolutionPreset.medium,
     );
-    await _controller.initialize();
+    await _controller?.initialize();
 
-    // Start the image stream to process frames
-    _controller.startImageStream((image) async {
-      // Convert the image to a format suitable for the model (e.g., 640x640). Every 2 seconds, the model will run inference on the image.
-      if (DateTime.now().second % 2 == 0) {
-          bool result = await model.runPoseDetection(image);
-          if (result) {
-            // If the model detects a squat, increment the squat count
-            squatCount++;
-            print('Squat count: $squatCount');
-          }
+    if (mounted) {
+      setState(() {});
+    }
+
+    _controller?.startImageStream((image) async {
+      if (_isDetecting) {
+        return;
+      }
+
+      _isDetecting = true;
+      try {
+        final inputImage = ImageUtils.getInputImage(image, _controller);
+        await _workoutAnalyzer.detectWorkout(inputImage, WorkoutType.squat);
+      } catch (e) {
+        debugPrint('Error processing image: $e');
+      } finally {
+        _isDetecting = false;
       }
     });
-    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Pose Estimation'),
+        title: const Text('Pose Estimation'),
       ),
-      body: _controller.value.isInitialized
-          ? CameraPreview(
-            _controller,
-          )  // Display camera feed
-          : Center(child: CircularProgressIndicator()),
+      body: _controller != null && _controller!.value.isInitialized
+          ? Stack(
+              children: [
+                CameraPreview(_controller!),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ValueListenableBuilder<Map<WorkoutType, int>>(
+                      valueListenable: _workoutAnalyzer.workoutCounts,
+                      builder: (context, workoutCounts, child) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Count: ${workoutCounts[WorkoutType.squat]}',
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : const Center(child: CircularProgressIndicator()),
     );
+  }
+
+  @override
+  void dispose() {
+    _workoutAnalyzer.dispose();
+    _controller?.dispose();
+    super.dispose();
   }
 }
